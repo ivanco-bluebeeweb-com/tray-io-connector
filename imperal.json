@@ -1,0 +1,1625 @@
+{
+  "manifest_schema_version": 3,
+  "sdk_version": "5.13.1",
+  "app_id": "tray-io-connector",
+  "version": "0.1.0",
+  "name": "Tray.io",
+  "description": "Connect your own Tray.io workspace (classic Platform REST API, static Bearer token) to manage workflows (list/get/create/update/enable/disable/delete/duplicate), workflow executions, and authentications (metadata only, never secret values) -- plus workspace health reports.",
+  "icon": "icon.svg",
+  "actions_explicit": true,
+  "system": false,
+  "capabilities": [
+    "tray:read",
+    "tray:write"
+  ],
+  "tools": [
+    {
+      "name": "connect_tray",
+      "description": "Connect a Tray.io workspace by saving its API token (Settings > Tokens in the Tray dashboard -- master or user token), after checking it actually works against GET /workflows.",
+      "action_type": "write",
+      "chain_callable": true,
+      "effects": [
+        "tray.connection.created"
+      ],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "label": {
+            "default": "",
+            "description": "A friendly name for this workspace, e.g. 'Acme production'.",
+            "title": "Label",
+            "type": "string"
+          },
+          "api_token": {
+            "description": "Tray API token (Settings > Tokens in the Tray dashboard -- master or user token).",
+            "title": "Api Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "api_token"
+        ],
+        "title": "ConnectTrayParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "connected": {
+            "title": "Connected",
+            "type": "boolean"
+          },
+          "connection_id": {
+            "default": "",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "label": {
+            "default": "",
+            "title": "Label",
+            "type": "string"
+          },
+          "workflows_seen": {
+            "default": 0,
+            "title": "Workflows Seen",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "connected"
+        ],
+        "title": "ConnectTrayResult",
+        "type": "object"
+      },
+      "event": "tray-io-connector.connection.created",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "tray"
+    },
+    {
+      "name": "list_connections",
+      "description": "List the connected Tray.io workspaces (masked token ids; secret values are never shown).",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Saved connection id; empty uses the most recent connection.",
+            "title": "Connection Id",
+            "type": "string"
+          }
+        },
+        "title": "ConnectionIdParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "$defs": {
+          "ConnectionRecord": {
+            "properties": {
+              "id": {
+                "title": "Id",
+                "type": "string"
+              },
+              "label": {
+                "title": "Label",
+                "type": "string"
+              },
+              "token_masked": {
+                "title": "Token Masked",
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "token_masked"
+            ],
+            "title": "ConnectionRecord",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "connections": {
+            "items": {
+              "$ref": "#/$defs/ConnectionRecord"
+            },
+            "title": "Connections",
+            "type": "array"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "connections",
+          "count"
+        ],
+        "title": "ConnectionList",
+        "type": "object"
+      },
+      "event": "",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "tray"
+    },
+    {
+      "name": "disconnect_tray",
+      "description": "Disconnect a Tray.io workspace: deletes the saved API token from Imperal. Nothing in Tray itself is changed; the token can be revoked in the Tray dashboard at any time.",
+      "action_type": "write",
+      "chain_callable": true,
+      "effects": [
+        "tray.connection.deleted"
+      ],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Saved connection id; empty uses the most recent connection.",
+            "title": "Connection Id",
+            "type": "string"
+          }
+        },
+        "title": "ConnectionIdParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "deleted": {
+            "title": "Deleted",
+            "type": "boolean"
+          },
+          "id": {
+            "default": "",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "deleted"
+        ],
+        "title": "DeleteResult",
+        "type": "object"
+      },
+      "event": "tray-io-connector.connection.deleted",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "tray"
+    },
+    {
+      "name": "list_workflows",
+      "description": "List workflows in the connected Tray.io workspace, optionally filtered by enabled state.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Saved connection id; empty uses the most recent connection.",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "limit": {
+            "default": 50,
+            "description": "Max workflows to return (1-200).",
+            "maximum": 200,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional: only enabled (true) or disabled (false) workflows.",
+            "title": "Enabled"
+          }
+        },
+        "title": "ListWorkflowsParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "$defs": {
+          "WorkflowRecord": {
+            "properties": {
+              "id": {
+                "default": "",
+                "title": "Id",
+                "type": "string"
+              },
+              "name": {
+                "default": "",
+                "title": "Name",
+                "type": "string"
+              },
+              "enabled": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Enabled"
+              },
+              "created": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Created"
+              },
+              "last_updated": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Last Updated"
+              },
+              "description": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Description"
+              },
+              "raw": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Raw"
+              }
+            },
+            "title": "WorkflowRecord",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "workflows": {
+            "items": {
+              "$ref": "#/$defs/WorkflowRecord"
+            },
+            "title": "Workflows",
+            "type": "array"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "workflows",
+          "count"
+        ],
+        "title": "WorkflowList",
+        "type": "object"
+      },
+      "event": "",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "tray"
+    },
+    {
+      "name": "get_workflow",
+      "description": "Read one Tray.io workflow in full by id.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Saved connection id; empty uses the most recent connection.",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "workflow_id": {
+            "description": "Workflow id from list_workflows.",
+            "title": "Workflow Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workflow_id"
+        ],
+        "title": "WorkflowIdParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "id": {
+            "default": "",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "default": "",
+            "title": "Name",
+            "type": "string"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Enabled"
+          },
+          "created": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Created"
+          },
+          "last_updated": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Last Updated"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Description"
+          },
+          "raw": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Raw"
+          }
+        },
+        "title": "WorkflowRecord",
+        "type": "object"
+      },
+      "event": "",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "tray"
+    },
+    {
+      "name": "create_workflow",
+      "description": "Create a new Tray.io workflow (name + optional description).",
+      "action_type": "write",
+      "chain_callable": true,
+      "effects": [
+        "tray.workflow.created"
+      ],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Saved connection id; empty uses the most recent connection.",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "name": {
+            "description": "Workflow name.",
+            "title": "Name",
+            "type": "string"
+          },
+          "description": {
+            "default": "",
+            "description": "Optional workflow description.",
+            "title": "Description",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "CreateWorkflowParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "id": {
+            "default": "",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "default": "",
+            "title": "Name",
+            "type": "string"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Enabled"
+          },
+          "created": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Created"
+          },
+          "last_updated": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Last Updated"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Description"
+          },
+          "raw": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Raw"
+          }
+        },
+        "title": "WorkflowRecord",
+        "type": "object"
+      },
+      "event": "tray-io-connector.workflow.created",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "tray"
+    },
+    {
+      "name": "update_workflow",
+      "description": "Update selected fields of an existing Tray.io workflow (name/description). Only given fields change.",
+      "action_type": "write",
+      "chain_callable": true,
+      "effects": [
+        "tray.workflow.updated"
+      ],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Saved connection id; empty uses the most recent connection.",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "workflow_id": {
+            "description": "Workflow id to update.",
+            "title": "Workflow Id",
+            "type": "string"
+          },
+          "name": {
+            "default": "",
+            "description": "New name; only given fields change.",
+            "title": "Name",
+            "type": "string"
+          },
+          "description": {
+            "default": "",
+            "description": "New description; only given fields change.",
+            "title": "Description",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workflow_id"
+        ],
+        "title": "UpdateWorkflowParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "id": {
+            "default": "",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "default": "",
+            "title": "Name",
+            "type": "string"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Enabled"
+          },
+          "created": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Created"
+          },
+          "last_updated": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Last Updated"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Description"
+          },
+          "raw": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Raw"
+          }
+        },
+        "title": "WorkflowRecord",
+        "type": "object"
+      },
+      "event": "tray-io-connector.workflow.updated",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "tray"
+    },
+    {
+      "name": "set_workflow_enabled",
+      "description": "Enable or disable a Tray.io workflow without deleting it.",
+      "action_type": "write",
+      "chain_callable": true,
+      "effects": [
+        "tray.workflow.toggled"
+      ],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Saved connection id; empty uses the most recent connection.",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "workflow_id": {
+            "description": "Workflow id to enable/disable.",
+            "title": "Workflow Id",
+            "type": "string"
+          },
+          "enabled": {
+            "description": "true = enabled, false = disabled.",
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "workflow_id",
+          "enabled"
+        ],
+        "title": "SetWorkflowEnabledParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "id": {
+            "default": "",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "default": "",
+            "title": "Name",
+            "type": "string"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Enabled"
+          },
+          "created": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Created"
+          },
+          "last_updated": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Last Updated"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Description"
+          },
+          "raw": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Raw"
+          }
+        },
+        "title": "WorkflowRecord",
+        "type": "object"
+      },
+      "event": "tray-io-connector.workflow.toggled",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "tray"
+    },
+    {
+      "name": "duplicate_workflow",
+      "description": "Duplicate a Tray.io workflow by exporting its definition and re-importing it under a new name.",
+      "action_type": "write",
+      "chain_callable": true,
+      "effects": [
+        "tray.workflow.duplicated"
+      ],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Saved connection id; empty uses the most recent connection.",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "workflow_id": {
+            "description": "Workflow id to copy.",
+            "title": "Workflow Id",
+            "type": "string"
+          },
+          "name": {
+            "default": "",
+            "description": "Name for the copy; default '<original> (copy)'.",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workflow_id"
+        ],
+        "title": "DuplicateWorkflowParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "id": {
+            "default": "",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "default": "",
+            "title": "Name",
+            "type": "string"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Enabled"
+          },
+          "created": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Created"
+          },
+          "last_updated": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Last Updated"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Description"
+          },
+          "raw": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Raw"
+          }
+        },
+        "title": "WorkflowRecord",
+        "type": "object"
+      },
+      "event": "tray-io-connector.workflow.duplicated",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "tray"
+    },
+    {
+      "name": "delete_workflow",
+      "description": "Permanently delete a Tray.io workflow by id. Cannot be undone.",
+      "action_type": "write",
+      "chain_callable": true,
+      "effects": [
+        "tray.workflow.deleted"
+      ],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Saved connection id; empty uses the most recent connection.",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "workflow_id": {
+            "description": "Workflow id from list_workflows.",
+            "title": "Workflow Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workflow_id"
+        ],
+        "title": "WorkflowIdParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "deleted": {
+            "title": "Deleted",
+            "type": "boolean"
+          },
+          "id": {
+            "default": "",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "deleted"
+        ],
+        "title": "DeleteResult",
+        "type": "object"
+      },
+      "event": "tray-io-connector.workflow.deleted",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "tray"
+    },
+    {
+      "name": "list_workflow_executions",
+      "description": "List workflow executions (instances), newest first -- optionally restricted to one workflow.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Saved connection id; empty uses the most recent connection.",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "workflow_id": {
+            "default": "",
+            "description": "Optional: only executions of this workflow.",
+            "title": "Workflow Id",
+            "type": "string"
+          },
+          "limit": {
+            "default": 25,
+            "description": "Max executions to return (1-100).",
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "ListExecutionsParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "$defs": {
+          "ExecutionRecord": {
+            "properties": {
+              "id": {
+                "default": "",
+                "title": "Id",
+                "type": "string"
+              },
+              "workflow_id": {
+                "default": "",
+                "title": "Workflow Id",
+                "type": "string"
+              },
+              "status": {
+                "default": "",
+                "title": "Status",
+                "type": "string"
+              },
+              "created": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Created"
+              },
+              "finished": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Finished"
+              },
+              "raw": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Raw"
+              }
+            },
+            "title": "ExecutionRecord",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "executions": {
+            "items": {
+              "$ref": "#/$defs/ExecutionRecord"
+            },
+            "title": "Executions",
+            "type": "array"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "executions",
+          "count"
+        ],
+        "title": "ExecutionList",
+        "type": "object"
+      },
+      "event": "",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "tray"
+    },
+    {
+      "name": "get_workflow_execution",
+      "description": "Read one workflow execution (instance) in full by id -- status, timing, and any error info.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Saved connection id; empty uses the most recent connection.",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "execution_id": {
+            "description": "Execution (instance) id.",
+            "title": "Execution Id",
+            "type": "string"
+          },
+          "workflow_id": {
+            "default": "",
+            "description": "Workflow id the execution belongs to (if required by the endpoint).",
+            "title": "Workflow Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "execution_id"
+        ],
+        "title": "ExecutionIdParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "id": {
+            "default": "",
+            "title": "Id",
+            "type": "string"
+          },
+          "workflow_id": {
+            "default": "",
+            "title": "Workflow Id",
+            "type": "string"
+          },
+          "status": {
+            "default": "",
+            "title": "Status",
+            "type": "string"
+          },
+          "created": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Created"
+          },
+          "finished": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Finished"
+          },
+          "raw": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Raw"
+          }
+        },
+        "title": "ExecutionRecord",
+        "type": "object"
+      },
+      "event": "",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "tray"
+    },
+    {
+      "name": "list_authentications",
+      "description": "List authentications (saved third-party credentials) in the connected Tray.io workspace -- id, name, and service only, NEVER credential values.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Saved connection id; empty uses the most recent connection.",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "limit": {
+            "default": 50,
+            "description": "Max authentications to return (1-200).",
+            "maximum": 200,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "ListAuthenticationsParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "$defs": {
+          "AuthenticationRecord": {
+            "properties": {
+              "id": {
+                "default": "",
+                "title": "Id",
+                "type": "string"
+              },
+              "name": {
+                "default": "",
+                "title": "Name",
+                "type": "string"
+              },
+              "service": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Service"
+              },
+              "created": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Created"
+              },
+              "raw": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Raw"
+              }
+            },
+            "title": "AuthenticationRecord",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "authentications": {
+            "items": {
+              "$ref": "#/$defs/AuthenticationRecord"
+            },
+            "title": "Authentications",
+            "type": "array"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "authentications",
+          "count"
+        ],
+        "title": "AuthenticationList",
+        "type": "object"
+      },
+      "event": "",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "tray"
+    },
+    {
+      "name": "get_authentication",
+      "description": "Read one Tray.io authentication's metadata by id -- name, service, created date. Credential values are never exposed.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Saved connection id; empty uses the most recent connection.",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "authentication_id": {
+            "description": "Authentication id from list_authentications.",
+            "title": "Authentication Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "authentication_id"
+        ],
+        "title": "AuthenticationIdParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "id": {
+            "default": "",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "default": "",
+            "title": "Name",
+            "type": "string"
+          },
+          "service": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Service"
+          },
+          "created": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Created"
+          },
+          "raw": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Raw"
+          }
+        },
+        "title": "AuthenticationRecord",
+        "type": "object"
+      },
+      "event": "",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "tray"
+    },
+    {
+      "name": "get_workspace_overview",
+      "description": "Value-add report: one-glance Tray.io workspace health snapshot -- workflow counts by enabled state, authentication count, and how many of the most recent executions failed.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Saved connection id; empty uses the most recent connection.",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "window_executions": {
+            "default": 100,
+            "description": "How many recent executions to scan in reports.",
+            "maximum": 300,
+            "minimum": 10,
+            "title": "Window Executions",
+            "type": "integer"
+          }
+        },
+        "title": "ReportParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "label": {
+            "default": "",
+            "title": "Label",
+            "type": "string"
+          },
+          "workflows": {
+            "default": 0,
+            "title": "Workflows",
+            "type": "integer"
+          },
+          "enabled": {
+            "default": 0,
+            "title": "Enabled",
+            "type": "integer"
+          },
+          "disabled": {
+            "default": 0,
+            "title": "Disabled",
+            "type": "integer"
+          },
+          "authentications": {
+            "default": 0,
+            "title": "Authentications",
+            "type": "integer"
+          },
+          "executions_scanned": {
+            "default": 0,
+            "title": "Executions Scanned",
+            "type": "integer"
+          },
+          "failed_recent": {
+            "default": 0,
+            "title": "Failed Recent",
+            "type": "integer"
+          },
+          "notes": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          }
+        },
+        "title": "OverviewReport",
+        "type": "object"
+      },
+      "event": "",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "tray"
+    },
+    {
+      "name": "get_failing_workflows_report",
+      "description": "Value-add report: scan the most recent workflow executions and rank the workflows with the most failures -- the fastest way to find the automations that keep breaking.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Saved connection id; empty uses the most recent connection.",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "window_executions": {
+            "default": 100,
+            "description": "How many recent executions to scan in reports.",
+            "maximum": 300,
+            "minimum": 10,
+            "title": "Window Executions",
+            "type": "integer"
+          }
+        },
+        "title": "ReportParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "$defs": {
+          "FailingWorkflow": {
+            "properties": {
+              "workflow_id": {
+                "default": "",
+                "title": "Workflow Id",
+                "type": "string"
+              },
+              "name": {
+                "default": "",
+                "title": "Name",
+                "type": "string"
+              },
+              "failed": {
+                "default": 0,
+                "title": "Failed",
+                "type": "integer"
+              },
+              "scanned": {
+                "default": 0,
+                "title": "Scanned",
+                "type": "integer"
+              }
+            },
+            "title": "FailingWorkflow",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "workflows": {
+            "items": {
+              "$ref": "#/$defs/FailingWorkflow"
+            },
+            "title": "Workflows",
+            "type": "array"
+          },
+          "scanned": {
+            "default": 0,
+            "title": "Scanned",
+            "type": "integer"
+          },
+          "notes": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "workflows"
+        ],
+        "title": "FailingWorkflowsReport",
+        "type": "object"
+      },
+      "event": "",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "tray"
+    }
+  ],
+  "signals": [],
+  "schedules": [],
+  "required_scopes": [],
+  "icon_size_bytes": 904,
+  "lifecycle": {
+    "health_check": {
+      "interval_sec": 60
+    }
+  },
+  "secrets": [
+    {
+      "name": "tray_connections",
+      "description": "JSON array of saved Tray.io connections (label + API token).",
+      "required": false,
+      "write_mode": "extension",
+      "max_bytes": 65536,
+      "scope": "user",
+      "rotation_hint_days": 365
+    }
+  ],
+  "panels": [
+    {
+      "panel_id": "secrets",
+      "slot": "right",
+      "title": "Secrets",
+      "tree": {},
+      "icon": "KeyRound",
+      "refresh": "manual",
+      "center_overlay": false
+    },
+    {
+      "panel_id": "tray_connect",
+      "slot": "left",
+      "title": "Tray.io",
+      "tree": {},
+      "icon": "",
+      "refresh": "manual",
+      "center_overlay": false
+    },
+    {
+      "panel_id": "tray_settings",
+      "slot": "center",
+      "title": "Tray.io settings",
+      "tree": {},
+      "icon": "",
+      "refresh": "manual",
+      "center_overlay": false
+    },
+    {
+      "panel_id": "tray_secrets",
+      "slot": "right",
+      "title": "Tray.io secrets",
+      "tree": {},
+      "icon": "",
+      "refresh": "manual",
+      "center_overlay": false
+    }
+  ]
+}
