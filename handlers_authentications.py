@@ -49,7 +49,7 @@ async def list_authentications(ctx, params: ListAuthenticationsParams) -> Action
     else:
         items = []
     records = [_auth(a) for a in items if isinstance(a, dict)]
-    return ActionResult.success(AuthenticationList(authentications=records, count=len(records))), summary="Authentications listed."
+    return ActionResult.success(AuthenticationList(authentications=records, count=len(records)), summary="Authentications listed.")
 
 
 @chat.function(
@@ -67,4 +67,4 @@ async def get_authentication(ctx, params: AuthenticationIdParams) -> ActionResul
         data = await tc.request(conn, "GET", f"/authentications/{params.authentication_id}")
     except tc.TrayError as exc:
         return ActionResult.error(exc.code, exc.message)
-    return ActionResult.success(_auth(data if isinstance(data, dict) else {})), summary="Authentication retrieved."
+    return ActionResult.success(_auth(data if isinstance(data, dict) else {}), summary="Authentication retrieved.")

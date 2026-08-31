@@ -62,7 +62,7 @@ async def list_workflows(ctx, params: ListWorkflowsParams) -> ActionResult:
         return ActionResult.error(exc.code, exc.message)
     items = [w for w in (_wf(r) for r in _items(data) if isinstance(r, dict))
              if params.enabled is None or w.enabled == params.enabled]
-    return ActionResult.success(WorkflowList(workflows=items, count=len(items))), summary="Workflows listed."
+    return ActionResult.success(WorkflowList(workflows=items, count=len(items)), summary="Workflows listed.")
 
 
 @chat.function(
@@ -79,7 +79,7 @@ async def get_workflow(ctx, params: WorkflowIdParams) -> ActionResult:
         data = await tc.request(conn, "GET", f"/workflows/{params.workflow_id}")
     except tc.TrayError as exc:
         return ActionResult.error(exc.code, exc.message)
-    return ActionResult.success(_wf(data if isinstance(data, dict) else {})), summary="Workflow retrieved."
+    return ActionResult.success(_wf(data if isinstance(data, dict) else {}), summary="Workflow retrieved.")
 
 
 @chat.function(
@@ -100,7 +100,7 @@ async def create_workflow(ctx, params: CreateWorkflowParams) -> ActionResult:
         data = await tc.request(conn, "POST", "/workflows", json_body=body)
     except tc.TrayError as exc:
         return ActionResult.error(exc.code, exc.message)
-    return ActionResult.success(_wf(data if isinstance(data, dict) else {})), summary="Workflow created."
+    return ActionResult.success(_wf(data if isinstance(data, dict) else {}), summary="Workflow created.")
 
 
 @chat.function(
@@ -125,7 +125,7 @@ async def update_workflow(ctx, params: UpdateWorkflowParams) -> ActionResult:
         data = await tc.request(conn, "PATCH", f"/workflows/{params.workflow_id}", json_body=body)
     except tc.TrayError as exc:
         return ActionResult.error(exc.code, exc.message)
-    return ActionResult.success(_wf(data if isinstance(data, dict) else {})), summary="Workflow updated."
+    return ActionResult.success(_wf(data if isinstance(data, dict) else {}), summary="Workflow updated.")
 
 
 @chat.function(
@@ -145,7 +145,7 @@ async def set_workflow_enabled(ctx, params: SetWorkflowEnabledParams) -> ActionR
         )
     except tc.TrayError as exc:
         return ActionResult.error(exc.code, exc.message)
-    return ActionResult.success(_wf(data if isinstance(data, dict) else {})), summary="Workflow enabled updated."
+    return ActionResult.success(_wf(data if isinstance(data, dict) else {}), summary="Workflow enabled updated.")
 
 
 @chat.function(
@@ -174,7 +174,7 @@ async def duplicate_workflow(ctx, params: DuplicateWorkflowParams) -> ActionResu
         created = await tc.request(conn, "POST", "/workflows", json_body=definition)
     except tc.TrayError as exc:
         return ActionResult.error(exc.code, exc.message)
-    return ActionResult.success(_wf(created if isinstance(created, dict) else {})), summary="Duplicate workflow done."
+    return ActionResult.success(_wf(created if isinstance(created, dict) else {}), summary="Duplicate workflow done.")
 
 
 @chat.function(
@@ -192,7 +192,7 @@ async def delete_workflow(ctx, params: WorkflowIdParams) -> ActionResult:
         await tc.request(conn, "DELETE", f"/workflows/{params.workflow_id}")
     except tc.TrayError as exc:
         return ActionResult.error(exc.code, exc.message)
-    return ActionResult.success(DeleteResult(deleted=True, id=params.workflow_id)), summary="Workflow deleted."
+    return ActionResult.success(DeleteResult(deleted=True, id=params.workflow_id), summary="Workflow deleted.")
 
 
 @chat.function(
@@ -216,7 +216,7 @@ async def list_workflow_executions(ctx, params: ListExecutionsParams) -> ActionR
     except tc.TrayError as exc:
         return ActionResult.error(exc.code, exc.message)
     items = [_exec(r) for r in _items(data) if isinstance(r, dict)]
-    return ActionResult.success(ExecutionList(executions=items, count=len(items))), summary="Workflow executions listed."
+    return ActionResult.success(ExecutionList(executions=items, count=len(items)), summary="Workflow executions listed.")
 
 
 @chat.function(
@@ -234,4 +234,4 @@ async def get_workflow_execution(ctx, params: ExecutionIdParams) -> ActionResult
         data = await tc.request(conn, "GET", path)
     except tc.TrayError as exc:
         return ActionResult.error(exc.code, exc.message)
-    return ActionResult.success(_exec(data if isinstance(data, dict) else {})), summary="Workflow execution retrieved."
+    return ActionResult.success(_exec(data if isinstance(data, dict) else {}), summary="Workflow execution retrieved.")

@@ -91,7 +91,7 @@ async def connect_tray(ctx, params: ConnectTrayParams) -> ActionResult:
     await _save_connections(ctx, conns)
     return ActionResult.success(ConnectTrayResult(
         connected=True, connection_id=record["id"], label=label, workflows_seen=wf_count,
-    )), summary="Tray connected."
+    ), summary="Tray connected.")
 
 
 @chat.function(
@@ -108,7 +108,7 @@ async def list_connections(ctx, params: ConnectionIdParams) -> ActionResult:
         ConnectionRecord(id=c["id"], label=c.get("label", "Tray.io workspace"), token_masked=_mask(c.get("token", "")))
         for c in conns
     ]
-    return ActionResult.success(ConnectionList(connections=records, count=len(records))), summary="Connections listed."
+    return ActionResult.success(ConnectionList(connections=records, count=len(records)), summary="Connections listed.")
 
 
 @chat.function(
@@ -131,4 +131,4 @@ async def disconnect_tray(ctx, params: ConnectionIdParams) -> ActionResult:
     if len(remaining) == len(conns):
         return ActionResult.error(tc.TR_NOT_FOUND, f"No saved connection with id '{target_id}'.")
     await _save_connections(ctx, remaining)
-    return ActionResult.success(DeleteResult(deleted=True, id=target_id)), summary="Tray disconnected."
+    return ActionResult.success(DeleteResult(deleted=True, id=target_id), summary="Tray disconnected.")

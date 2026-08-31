@@ -54,7 +54,7 @@ async def get_workspace_overview(ctx, params: ReportParams) -> ActionResult:
         executions_scanned=len(executions),
         failed_recent=failed,
         notes=notes,
-    )), summary="Workspace overview retrieved."
+    ), summary="Workspace overview retrieved.")
 
 
 @chat.function(
@@ -102,4 +102,4 @@ async def get_failing_workflows_report(ctx, params: ReportParams) -> ActionResul
     rows.sort(key=lambda r: r.failed, reverse=True)
     return ActionResult.success(FailingWorkflowsReport(
         workflows=rows, scanned=len(executions), notes=notes,
-    )), summary="Failing workflows report retrieved."
+    ), summary="Failing workflows report retrieved.")
