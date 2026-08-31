@@ -45,7 +45,7 @@ async def get_workspace_overview(ctx, params: ReportParams) -> ActionResult:
         executions = []
         notes.append("Executions endpoint not reachable with this token; recent failure count omitted.")
     failed = sum(1 for e in executions if (e.status or "").lower() in ("failed", "error", "aborted"))
-    return ActionResult.ok(OverviewReport(
+    return ActionResult.success(OverviewReport(
         label=conn.get("label", "Tray.io workspace"),
         workflows=len(workflows),
         enabled=enabled,
@@ -54,7 +54,7 @@ async def get_workspace_overview(ctx, params: ReportParams) -> ActionResult:
         executions_scanned=len(executions),
         failed_recent=failed,
         notes=notes,
-    ))
+    )), summary="Workspace overview retrieved."
 
 
 @chat.function(
@@ -100,6 +100,6 @@ async def get_failing_workflows_report(ctx, params: ReportParams) -> ActionResul
         for wf_id, n in failed.items() if n > 0
     ]
     rows.sort(key=lambda r: r.failed, reverse=True)
-    return ActionResult.ok(FailingWorkflowsReport(
+    return ActionResult.success(FailingWorkflowsReport(
         workflows=rows, scanned=len(executions), notes=notes,
-    ))
+    )), summary="Failing workflows report retrieved."
