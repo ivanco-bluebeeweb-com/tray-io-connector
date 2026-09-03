@@ -14,14 +14,13 @@ import handlers_connection as h
 
 def _settings_button() -> ui.UINode:
     return ui.Button(
-        "App settings", variant="secondary", size="sm", full_width=True,
-        icon="settings", on_click=ui.Call("__panel__tray_settings"),
+        "App settings", variant="secondary", size="sm", icon="settings", on_click=ui.Call("__panel__tray_settings"),
     )
 
 
 def _help_modal() -> ui.UINode:
     return ui.Modal(
-        trigger=ui.Button("How do I set this up?", variant="ghost", size="sm", full_width=True),
+        trigger=ui.Button("How do I set this up?", variant="ghost", size="sm"),
         title="Connecting Tray.io",
         children=[
             ui.Text(
@@ -44,6 +43,9 @@ def _help_modal() -> ui.UINode:
 
 
 def _connect_form() -> ui.UINode:
+    ui.Button("Authorize Tray.io (OAuth 2.0)", variant="primary", size="sm", icon="login"),
+    ui.Divider(),
+    ui.Text("Or connect via API Access Token", variant="caption"),
     return ui.Form(
         action="__tool__connect_tray",
         submit_label="Connect Tray.io",
