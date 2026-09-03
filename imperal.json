@@ -1621,5 +1621,34 @@
       "refresh": "manual",
       "center_overlay": false
     }
-  ]
+  ],
+  "pricing": {
+    "model": "per_action",
+    "currency": "credits",
+    "monthly_price": 0,
+    "free_tools": [
+      "connect_tray",
+      "list_connections",
+      "disconnect_tray"
+    ],
+    "tool_prices": {
+      "connect_tray": 0,
+      "list_connections": 0,
+      "disconnect_tray": 0,
+      "list_workflows": 8,
+      "get_workflow": 8,
+      "create_workflow": 16,
+      "update_workflow": 16,
+      "set_workflow_enabled": 16,
+      "duplicate_workflow": 16,
+      "delete_workflow": 16,
+      "list_workflow_executions": 8,
+      "get_workflow_execution": 8,
+      "list_authentications": 8,
+      "get_authentication": 8,
+      "get_workspace_overview": 8,
+      "get_failing_workflows_report": 8
+    },
+    "notes": "Standard platform scale {0, 8, 16, 20, 40}. 0 = access setup and harmless discovery. 8 = read/list/search. 16 = standard single mutation/CRUD. 20 = bulk or heavy audit operation."
+  }
 }
